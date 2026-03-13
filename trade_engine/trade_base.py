@@ -12,24 +12,24 @@ class Order:
 
 @dataclass
 class OrderStatus:
-    order_id: str       # origin order id
+    order_id: str  # origin order id
     exch_order_id: str  # exchange order id
-    status: str         # e.g. NEW, PARTIALLY_FILLED, FILLED, CANCELLED 
-    filled_qty: float   # total filled quantity
-    cancelled_qty: float    # total cancelled quantity
-    total_qty: float    # total quantity
-    match_price: float   # match price, price of the latest fill
-    match_qty: float     # match quantity, quantity of the latest fill
+    status: str  # e.g. NEW, PARTIALLY_FILLED, FILLED, CANCELLED
+    filled_qty: float  # total filled quantity
+    cancelled_qty: float  # total cancelled quantity
+    total_qty: float  # total quantity
+    match_price: float  # match price, price of the latest fill
+    match_qty: float  # match quantity, quantity of the latest fill
 
 
 @dataclass
 class Position:
-    symbol: str         # symbol of the position
-    qty: float          # total quantity of the position
-    avg_price: float    # average price of the position
-    market_value: float # market value of the position
-    unrealized_pnl: float   #   unrealized profit and loss of the position
-    realized_pnl: float # realized profit and loss of the position
+    symbol: str  # symbol of the position
+    qty: float  # total quantity of the position
+    avg_price: float  # average price of the position
+    market_value: float  # market value of the position
+    unrealized_pnl: float  #   unrealized profit and loss of the position
+    realized_pnl: float  # realized profit and loss of the position
 
 
 @dataclass
@@ -87,4 +87,3 @@ class TradeBase(ABC):
 
     def on_order_status(self, order_status: OrderStatus):
         pass
-

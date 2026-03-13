@@ -1,21 +1,17 @@
 import asyncio
 import json
-import urllib
+from unittest import mock
 import websockets
 from urllib.parse import quote_plus
 from typing import Any
 
-try:
-    from .quote_base import Order, OrderBook, QuoteEngineCallback, Transaction
-except ImportError:
-    from quote_base import Order, OrderBook, QuoteEngineCallback, Transaction
+from .quote_base import Order, OrderBook, QuoteEngineCallback, Transaction
 
 PROD_STREAM_BASE = "wss://fstream.binance.com/stream"
 TESTNET_STREAM_BASE = "wss://stream.binancefuture.com/stream"
 
 
 class BinanceQuoteEngine:
-
     SYMBOL_ALIASES = {
         "BTC": "BTCUSDT",
         "ETH": "ETHUSDT",
@@ -33,7 +29,7 @@ class BinanceQuoteEngine:
     ):
         self.sandbox = sandbox
         self.timeout_ms = timeout_ms
-        self._callback = callback
+        self.set_callback(callback)
         self.assets = assets
         self.depth_levels = depth_levels
         self.update_interval_ms = update_interval_ms
@@ -42,7 +38,10 @@ class BinanceQuoteEngine:
         self._running = False
 
     def set_callback(self, callback: QuoteEngineCallback | None) -> None:
-        self._callback = callback
+        if callback is None:
+            self._callback = mock.AsyncMock(spec=QuoteEngineCallback)
+        else:
+            self._callback = callback
 
     def _build_streams(self) -> list[str]:
         def _normalize_symbol(self, asset: str) -> str:
@@ -69,11 +68,11 @@ class BinanceQuoteEngine:
         # Partial depth payloads sometimes omit the symbol "s", so we extract it from the stream name
         symbol = payload.get("s")
         if not symbol and stream_name:
-            symbol = stream_name.split('@')[0].upper()
-            
+            symbol = stream_name.split("@")[0].upper()
+
         bids = [Order(side="bid", price=float(price), amount=float(size)) for price, size in payload.get("b", [])]
         asks = [Order(side="ask", price=float(price), amount=float(size)) for price, size in payload.get("a", [])]
-        
+
         return OrderBook(
             symbol=symbol or "",
             timestamp=payload.get("E") or payload.get("T"),
@@ -82,11 +81,6 @@ class BinanceQuoteEngine:
             bids=bids,
             asks=asks,
         )
-
-    def _emit_order_book(self, order_book: OrderBook) -> None:
-        if self._callback is None:
-            return
-        self._callback.on_order_book(order_book)
 
     def _to_transaction(self, payload: dict[str, Any]) -> Transaction:
         return Transaction(
@@ -106,42 +100,34 @@ class BinanceQuoteEngine:
             raw=payload,
         )
 
-    def _emit_transaction(self, transaction: Transaction) -> None:
-        if self._callback is None:
-            return
-        self._callback.on_transaction(transaction)
-
     async def run(self) -> None:
-        if websockets is None:
-            raise RuntimeError("Package `websockets` is required for Binance L2 streaming. Install it with `pip install websockets`.")
-        
         ws_url = self.ws_url or self.connect()
         self._running = True
-        
+
         async with websockets.connect(
             ws_url,
             open_timeout=self.timeout_ms / 1000,
             ping_interval=120,
             ping_timeout=600,
             close_timeout=10,
-            max_queue=1024, # Note: max_queue may trigger a warning in websockets >= 14.0
+            max_queue=1024,  # Note: max_queue may trigger a warning in websockets >= 14.0
         ) as websocket:
             while self._running:
                 raw_message = await websocket.recv()
                 message = json.loads(raw_message)
-                
+
                 # Unwrap the combined stream payload
                 stream_name = message.get("stream", "")
                 payload = message.get("data", message)
                 event_type = payload.get("e")
-                
+
                 # Check stream_name because partial depth streams lack an "e" field
                 if "@depth" in stream_name or event_type == "depthUpdate":
                     order_book = self._to_order_book(payload, stream_name)
-                    self._emit_order_book(order_book)
+                    await self._callback.on_order_book(order_book)
                 elif "@aggTrade" in stream_name or event_type in ("aggTrade", "trade"):
                     transaction = self._to_transaction(payload)
-                    self._emit_transaction(transaction)
+                    await self._callback.on_transaction(transaction)
 
     def close(self) -> None:
         self._running = False
