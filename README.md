@@ -1,5 +1,7 @@
 # quant alpha
 
+See [CHANGELOG.md](CHANGELOG.md) for recent changes.
+
 ## Dependency management (uv)
 
 This project uses [uv](https://github.com/astral-sh/uv) to manage dependencies and generate `uv.lock`. Ensure your local Python version is 3.12 (see `.python-version`).
