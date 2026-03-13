@@ -9,6 +9,9 @@ Common commands:
 - Install / sync dependencies: `uv sync`
 - Add a runtime dependency: `uv add <package>`
 - Add a development dependency: `uv add --dev <package>`
+- Lint / format with Ruff:
+  - Run lint and auto-fix: `uv run ruff check . --fix`
+  - Format: `uv run ruff format .`
 
 Quick sync example:
 
