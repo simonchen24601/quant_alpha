@@ -7,13 +7,13 @@ from urllib.parse import quote_plus
 
 import websockets
 
-from .quote_base import Order, OrderBook, QuoteEngineCallback, Snapshot, Transaction
+from .quote_base import Order, OrderBook, QuoteEngineCallback, L2_Snapshot, Transaction
 
 logger = logging.getLogger(__name__)
 
 
 class _NullQuoteCallback(QuoteEngineCallback):
-    async def on_snapshot(self, snapshot: Snapshot) -> None:
+    async def on_snapshot(self, snapshot: L2_Snapshot) -> None:
         return None
 
     async def on_transaction(self, transaction: Transaction | None) -> None:
